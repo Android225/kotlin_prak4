@@ -1,63 +1,68 @@
-package com.example.kotlin_prak4.UI.View
+package com.example.kotlin_prak4.Data.DataSource.Product
 
-import android.annotation.SuppressLint
 import android.os.Bundle
-import android.view.*
-import android.widget.Button
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.kotlin_prak4.Data.DataSource.Product.ProductApi
-import com.example.kotlin_prak4.R
-import com.example.kotlin_prak4.UI.StateHolder.Adapters.ProductListAdapter
-import com.example.kotlin_prak4.UI.StateHolder.ViewModel.ProductVM
 import com.example.kotlin_prak4.databinding.Fragment2Binding
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
 class Fragment2 : Fragment() {
+    // Привязка для использования с layout fragment2.xml.
     private lateinit var binding: Fragment2Binding
-    private lateinit var mProductVM: ProductVM;
 
-    override fun onResume() {
-        super.onResume()
+    // ViewModel для управления данными продуктов.
+    private lateinit var viewModel: ProductVM
 
-    }
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
+        // Инициализация привязки макета.
         binding = Fragment2Binding.inflate(inflater, container, false)
-        mProductVM = ViewModelProvider(this).get(ProductVM::class.java)
-        val retrofit = Retrofit.Builder().baseUrl("https://dummyjson.com").addConverterFactory(
-            GsonConverterFactory.create()
-        ).build()
+
+        // Получение экземпляра ViewModel.
+        viewModel = ViewModelProvider(this)[ProductVM::class.java]
+
+        // Настройка Retrofit для работы с API.
+        val retrofit = Retrofit.Builder()
+            .baseUrl("https://dummyjson.com") // URL API.
+            .addConverterFactory(GsonConverterFactory.create()) // Конвертер для JSON.
+            .build()
+
+        // Создание API-интерфейса из Retrofit.
         val productApi = retrofit.create(ProductApi::class.java)
+
+        // Запуск корутины для асинхронного получения данных и их добавления в базу данных.
         CoroutineScope(Dispatchers.IO).launch {
-
             val products = productApi.getAllProduct()
-
-            mProductVM.addAllItem(products.products)
-
-
+            viewModel.addAllItem(products.products)
         }
 
+        // Создание и настройка адаптера для RecyclerView.
         val adapter = ProductListAdapter()
-        binding.resyclerView.layoutManager = LinearLayoutManager(requireContext())
-        mProductVM.getAllData.observe(viewLifecycleOwner) { product ->
+        binding.resyclerView.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            this.adapter = adapter
+        }
+
+        // Наблюдение за LiveData из ViewModel и обновление UI.
+        viewModel.allProducts.observe(viewLifecycleOwner) { product ->
             adapter.setData(product)
         }
-        binding.resyclerView.adapter = adapter
 
+        // Обработчики событий для кнопок интерфейса.
         binding.addButton.setOnClickListener {
-            findNavController().navigate(R.id.action_fragment2_to_addFragment)
+            // Код для кнопки добавления нового продукта.
         }
         binding.buttonBackFragment2.setOnClickListener {
-            findNavController().navigate(R.id.action_fragment2_to_fragment1)
+            // Код для возвращения на предыдущий экран.
         }
 
         return binding.root
